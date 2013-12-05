@@ -11,7 +11,7 @@ ext {
     spockVersion = '0.7-groovy-2.0'
 }
 
-defaultTasks 'clean', 'build', 'projectReport', 'publishToMavenLocal', 'publish'
+defaultTasks 'clean', 'build', 'projectReport', 'groovydoc', 'javadoc','publishToMavenLocal', 'publish'
 
 repositories {
     mavenCentral()
@@ -90,6 +90,22 @@ task testBuildersJar(type: Jar, dependsOn: testClasses) {
     }
 }
 
+task groovydocJar(type: Jar, dependsOn: groovydoc) {
+    classifier = 'groovydoc'
+    from project.docsDir.path + '/groovydoc'
+    manifest = project.manifest {
+        from sharedManifest
+    }
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from project.docsDir.path + '/javadoc'
+    manifest = project.manifest {
+        from sharedManifest
+    }
+}
+
 publishing {
     publications {
         repositories {
@@ -114,6 +130,12 @@ publishing {
             }
             artifact testBinariesJar {
                 classifier "test"
+            }
+            artifact groovydocJar {
+                classifier "groovy-api"
+            }
+            artifact javadocJar {
+                classifier "java-api"
             }
         }
         builders( MavenPublication ) {
