@@ -82,6 +82,14 @@ task testBinariesJar(type: Jar, dependsOn: testClasses) {
     }
 }
 
+// publish the test jar as a different artifact
+task testBuildersJar(type: Jar, dependsOn: testClasses) {
+    from sourceSets.test.output
+    manifest = project.manifest {
+        from sharedManifest
+    }
+}
+
 publishing {
     publications {
         mavenJava(MavenPublication) {
@@ -96,6 +104,10 @@ publishing {
             artifact testBinariesJar {
                 classifier "test"
             }
+        }
+        builders( MavenPublication ) {
+            artifactId 'builders'
+            artifact testBuildersJar
         }
     }
 }
