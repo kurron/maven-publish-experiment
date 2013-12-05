@@ -90,6 +90,15 @@ task testBuildersJar(type: Jar, dependsOn: testClasses) {
     }
 }
 
+task testBuildersSourcesJar(type: Jar, dependsOn: testClasses) {
+    from sourceSets.test.allSource
+    exclude('**/*.properties')
+    manifest = project.manifest {
+        from sharedManifest
+    }
+}
+
+
 task groovydocJar(type: Jar, dependsOn: groovydoc) {
     classifier = 'groovydoc'
     from project.docsDir.path + '/groovydoc'
@@ -141,6 +150,12 @@ publishing {
         builders( MavenPublication ) {
             artifactId 'builders'
             artifact testBuildersJar
+        }
+        builders( MavenPublication ) {
+            artifactId 'builders'
+            artifact testBuildersSourcesJar {
+                classifier 'sources'
+            }
         }
     }
 }
