@@ -11,7 +11,7 @@ ext {
     spockVersion = '0.7-groovy-2.0'
 }
 
-defaultTasks 'clean', 'build', 'projectReport', 'publishToMavenLocal'
+defaultTasks 'clean', 'build', 'projectReport', 'publishToMavenLocal', 'publish'
 
 repositories {
     mavenCentral()
@@ -92,6 +92,17 @@ task testBuildersJar(type: Jar, dependsOn: testClasses) {
 
 publishing {
     publications {
+        repositories {
+            maven {
+                description 'Sandbox area of the repository to test publishing to'
+                url = 'http://192.168.254.81:81/artifactory/mods-release-local'
+                credentials {
+                    username = 'SVNBuild'
+                    password = 'Snoopy*09'
+                }
+            }
+        }
+
         mavenJava(MavenPublication) {
             from components.java
 
