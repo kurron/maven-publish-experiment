@@ -1,0 +1,79 @@
+apply plugin: 'groovy'
+apply plugin: 'project-report'
+apply plugin: 'jacoco'
+
+ext {
+    groovyVersion = '2.2.0'
+    hamcrestVersion = '1.3'
+    junitVersion = '4.11'
+    logbackVersion = '1.0.13'
+    slf4jVersion = '1.7.5'
+    spockVersion = '0.7-groovy-2.0'
+    jacocoVersion = '0.6.3.201306030806'
+    jacocoExclude = ['org/kurron/jacoco/SkippedService','org/kurron/jacoco/UntestedService']
+}
+
+defaultTasks 'clean', 'build', 'projectReport'
+
+repositories {
+    mavenCentral()
+}
+
+configurations.all {
+    exclude group: 'commons-logging'
+    exclude group: 'log4j'
+    exclude module: 'junit-dep'
+    exclude module: 'hamcrest-core'
+}
+
+jacoco {
+    toolVersion = jacocoVersion
+}
+
+jacocoTestReport {
+    reports {
+        xml.enabled true
+        csv.enabled false
+        html.enabled true
+    }
+}
+
+dependencies {
+    compile "org.codehaus.groovy:groovy-all:${groovyVersion}"
+    compile "org.slf4j:slf4j-api:${slf4jVersion}"
+    compile "org.slf4j:slf4j-ext:${slf4jVersion}"
+    compile "org.slf4j:jcl-over-slf4j:${slf4jVersion}"
+    compile "ch.qos.logback:logback-core:${logbackVersion}"
+    compile "ch.qos.logback:logback-classic:${logbackVersion}"
+
+    runtime "org.slf4j:jul-to-slf4j:${slf4jVersion}"
+    runtime "org.slf4j:log4j-over-slf4j:${slf4jVersion}"
+
+    testCompile "org.spockframework:spock-core:${spockVersion}"
+    testCompile "junit:junit:${junitVersion}"
+}
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '1.9'
+}
+
+task copyTask( type: Copy, dependsOn: 'jacocoTestReport' ) {
+    from 'report.dtd'
+    into 'build/reports/jacoco/test'
+}
+
+task ronbo( dependsOn: 'copyTask' ) {
+    // Since the JaCoCo plug in does not honor excludes or break the build if coverage thresholds are crossed, we have to do it by hand.
+    doFirst {
+        def xml = new XmlParser().parse( 'build/reports/jacoco/test/jacocoTestReport.xml' )
+        def missedCoverage = xml.package.class.findAll { clazz -> !jacocoExclude.contains( clazz.@name ) }.collect{ it.counter }.flatten().findAll{ it.@type == 'INSTRUCTION' }.flatten().collect { it.@missed >= it.@covered }.any { it }
+        if ( missedCoverage ) {
+            throw new IllegalStateException( "Not enough code coverage! Consult ${buildDir}/reports/jacoco/test/html/index.html for details." )
+        }
+        else {
+            logger.quiet 'Adequate code coverage detected.'
+        }
+    }
+}
+
+tasks.getByName( 'check' ).dependsOn( 'ronbo' )
