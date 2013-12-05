@@ -1,5 +1,6 @@
 apply plugin: 'groovy'
 apply plugin: 'project-report'
+apply plugin: 'maven-publish'
 
 ext {
     groovyVersion = '2.2.0'
@@ -10,7 +11,7 @@ ext {
     spockVersion = '0.7-groovy-2.0'
 }
 
-defaultTasks 'clean', 'build', 'projectReport'
+defaultTasks 'clean', 'build', 'projectReport', 'publishToMavenLocal'
 
 repositories {
     mavenCentral()
@@ -22,6 +23,9 @@ configurations.all {
     exclude module: 'junit-dep'
     exclude module: 'hamcrest-core'
 }
+
+project.group = 'org.kurron'
+project.version = '1.0.0'
 
 dependencies {
     compile "org.codehaus.groovy:groovy-all:${groovyVersion}"
@@ -40,4 +44,58 @@ dependencies {
 
 task wrapper(type: Wrapper) {
     gradleVersion = '1.9'
+}
+
+ext.sharedManifest = manifest {
+    attributes( "Implementation-Title": project.name, "Implementation-Version": project.version )
+}
+
+jar {
+    manifest = project.manifest {
+        from sharedManifest
+    }
+}
+
+task sourcesJar(type: Jar, dependsOn: classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+    exclude('**/*.properties')
+    manifest = project.manifest {
+        from sharedManifest
+    }
+}
+
+task testSourcesJar(type: Jar, dependsOn: testClasses) {
+    classifier = 'test-sources'
+    from sourceSets.test.allSource
+    exclude('**/*.properties')
+    manifest = project.manifest {
+        from sharedManifest
+    }
+}
+
+task testBinariesJar(type: Jar, dependsOn: testClasses) {
+    classifier = 'test'
+    from sourceSets.test.output
+    manifest = project.manifest {
+        from sharedManifest
+    }
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+
+            artifact sourcesJar {
+                classifier "sources"
+            }
+            artifact testSourcesJar {
+                classifier "test-sources"
+            }
+            artifact testBinariesJar {
+                classifier "test"
+            }
+        }
+    }
 }
