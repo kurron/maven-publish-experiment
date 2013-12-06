@@ -1,0 +1,65 @@
+logger.quiet 'Init script called.'
+
+logger.quiet 'Applying maven-publish plugin'
+
+buildscript {
+    allprojects {
+        afterEvaluate { project ->
+            if ( project.plugins.hasPlugin( JavaPlugin ) ) {
+                project.plugins.apply( 'maven-publish' )
+
+                project.ext.sharedManifest = manifest {
+                    attributes( "Implementation-Title": project.name, "Implementation-Version": project.version )
+                }
+
+                project.jar {
+                    manifest = project.manifest {
+                        from sharedManifest
+                    }
+                }
+                project.task([type: Jar, dependsOn: classes], 'sourcesJar' ) {
+                    classifier = 'sources'
+                    from sourceSets.main.allSource
+                    exclude('**/*.properties')
+                    manifest = project.manifest {
+                        from sharedManifest
+                    }
+                }
+
+                project.task([type: Jar, dependsOn: testClasses], 'testSourcesJar' ) {
+                    classifier = 'test-sources'
+                    from project.sourceSets.test.allSource
+                    exclude('**/*.properties')
+                    manifest = project.manifest {
+                        from sharedManifest
+                    }
+                }
+                project.publishing {
+                    publications {
+                        repositories {
+                            maven {
+                                description 'Sandbox area of the repository to test publishing to'
+                                url = 'http://192.168.254.81:81/artifactory/mods-release-local'
+                                credentials {
+                                    username = 'SVNBuild'
+                                    password = 'Snoopy*09'
+                                }
+                            }
+                        }
+
+                        mavenJava(MavenPublication) {
+                            from project.components.java
+
+                            artifact project.sourcesJar {
+                                classifier "sources"
+                            }
+                            artifact project.testSourcesJar {
+                                classifier "test-sources"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
